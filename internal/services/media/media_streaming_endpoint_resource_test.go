@@ -16,13 +16,29 @@ import (
 type MediaStreamingEndpointResource struct {
 }
 
-func TestAccMediaStreamingEndpoint_basic(t *testing.T) {
+func TestAccMediaStreamingEndpoint_standard(t *testing.T) {
 	data := acceptance.BuildTestData(t, "azurerm_media_streaming_endpoint", "test")
 	r := MediaStreamingEndpointResource{}
 
 	data.ResourceTest(t, r, []acceptance.TestStep{
 		{
-			Config: r.basic(data),
+			Config: r.standard(data),
+			Check: acceptance.ComposeAggregateTestCheckFunc(
+				check.That(data.ResourceName).Key("scale_units").HasValue("0"),
+				check.That(data.ResourceName).Key("host_name").Exists(),
+			),
+		},
+		data.ImportStep(),
+	})
+}
+
+func TestAccMediaStreamingEndpoint_premium(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_media_streaming_endpoint", "test")
+	r := MediaStreamingEndpointResource{}
+
+	data.ResourceTest(t, r, []acceptance.TestStep{
+		{
+			Config: r.premium(data),
 			Check: acceptance.ComposeAggregateTestCheckFunc(
 				check.That(data.ResourceName).Key("scale_units").HasValue("1"),
 				check.That(data.ResourceName).Key("host_name").Exists(),
@@ -69,7 +85,7 @@ func TestAccMediaStreamingEndpoint_shouldStopWhenStarted(t *testing.T) {
 
 	data.ResourceTest(t, r, []acceptance.TestStep{
 		{
-			Config: r.basic(data),
+			Config: r.premium(data),
 			Check: acceptance.ComposeAggregateTestCheckFunc(
 				data.CheckWithClient(r.Start),
 			),
@@ -109,7 +125,20 @@ func (MediaStreamingEndpointResource) Exists(ctx context.Context, clients *clien
 	return utils.Bool(resp.StreamingEndpointProperties != nil), nil
 }
 
-func (r MediaStreamingEndpointResource) basic(data acceptance.TestData) string {
+func (r MediaStreamingEndpointResource) standard(data acceptance.TestData) string {
+	return fmt.Sprintf(`
+%s
+resource "azurerm_media_streaming_endpoint" "test" {
+  name                        = "endpoint1"
+  resource_group_name         = azurerm_resource_group.test.name
+  location                    = azurerm_resource_group.test.location
+  media_services_account_name = azurerm_media_services_account.test.name
+  scale_units                 = 0
+}
+`, r.template(data))
+}
+
+func (r MediaStreamingEndpointResource) premium(data acceptance.TestData) string {
 	return fmt.Sprintf(`
 %s
 resource "azurerm_media_streaming_endpoint" "test" {
